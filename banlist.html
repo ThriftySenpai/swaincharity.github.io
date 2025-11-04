@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoL Tournament Ban List Viewer</title>
+    <style>
+        :root {
+            --banned-color: #B33A3A; /* Deep Red */
+            --available-color: #3AB37D; /* Teal/Green */
+            --background-color: #1a1a2e; /* Dark Blue/Purple */
+            --card-bg: #2c2c54;
+            --text-color: #ffffff;
+            --header-bg: #162447;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--available-color);
+            border-bottom: 2px solid var(--header-bg);
+            padding-bottom: 10px;
+            margin-bottom: 30px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 15px;
+            background-color: var(--header-bg);
+            border-radius: 8px;
+        }
+
+        .controls label {
+            font-size: 1.1em;
+            margin-right: 15px;
+        }
+
+        #filter-select {
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 1px solid var(--available-color);
+            background-color: var(--card-bg);
+            color: var(--text-color);
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        /* Champion List Grid */
+        #champion-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+        }
+
+        .champion-card {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s;
+        }
+
+        .champion-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .champion-name {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .champion-status {
+            font-size: 0.9em;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: var(--text-color);
+            display: inline-block;
+        }
+
+        /* Status Coloring */
+        .status-Banned {
+            background-color: var(--banned-color);
+        }
+
+        .status-Available {
+            background-color: var(--available-color);
+        }
+
+        .loading-message {
+            text-align: center;
+            font-size: 1.5em;
+            padding: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚔️ LoL Tournament Ban Status</h1>
+        <div class="controls">
+            <label for="filter-select">Filter by Status:</label>
+            <select id="filter-select">
+                <option value="All">All Champions</option>
+                <option value="Available">Available</option>
+                <option value="Banned">Banned</option>
+            </select>
+        </div>
+
+        <div id="champion-list" class="loading-message">
+            Loading Champion Data...
+        </div>
+    </div>
+
+    <script>
+        // 🚨 IMPORTANT: Replace the placeholder below with your actual Google Sheet URL.
+        const SPREADSHEET_ID = 'e/2PACX-1vQJ8422w9uVjUOHlrr0AZAHD0eNts8REfeL42SiKuw2Qwkjgv75_8gSh4WSprY_GpEGHInJqDdiDtP2'; 
+        // 0 is typically the first sheet (BanData), but check your URL
+        const SHEET_GID = '688926347'; 
+
+        // This URL fetches the data from your published sheet in a plain CSV format.
+        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQJ8422w9uVjUOHlrr0AZAHD0eNts8REfeL42SiKuw2Qwkjgv75_8gSh4WSprY_GpEGHInJqDdiDtP2/pub?gid=688926347&single=true&output=csv';// `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${SHEET_GID}`;
+
+        const championListElement = document.getElementById('champion-list');
+        const filterSelect = document.getElementById('filter-select');
+        let championData = []; // To store the parsed data
+
+        /**
+         * Step 1: Fetch Data from Google Sheet
+         */
+        async function fetchData() {
+            try {
+                const response = await fetch(GOOGLE_SHEET_URL);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const csvText = await response.text();
+                championData = parseData(csvText);
+                renderList(championData, filterSelect.value);
+            } catch (error) {
+                championListElement.innerHTML = `<div class="loading-message" style="color: red;">
+                    ❌ Error loading data. Please check your **SPREADSHEET_ID**, **SHEET_GID**, and ensure the Google Sheet is published to the web.
+                </div>`;
+                console.error("Fetch error:", error);
+            }
+        }
+
+        /**
+         * Step 2: Parse the CSV Data
+         * Assumes Champion Name in Column 1 (A) and Status in Column 3 (C) (as set up in the previous step)
+         */
+        function parseData(csvText) {
+            // Split into rows and skip the header row (index 0)
+            const rows = csvText.split('\n').slice(1); 
+            const parsedData = rows.map(row => {
+                // Simple CSV parsing: split by comma, handling potential quotes if needed
+                const columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                
+                // Columns are: A (Champion), B (Boolean), C (Status)
+                const name = columns[0] ? columns[0].replace(/"/g, '').trim() : '';
+                const status = columns[2] ? columns[2].replace(/"/g, '').trim() : '';
+
+                if (name && status) {
+                    return { name, status };
+                }
+                return null;
+            }).filter(item => item !== null);
+
+            return parsedData.sort((a, b) => a.name.localeCompare(b.name));
+        }
+
+        /**
+         * Step 3: Render the List
+         */
+        function renderList(data, filter) {
+            championListElement.innerHTML = '';
+            
+            const filteredData = data.filter(champion => {
+                if (filter === 'All') {
+                    return true;
+                }
+                return champion.status === filter;
+            });
+
+            if (filteredData.length === 0) {
+                championListElement.innerHTML = `<div class="loading-message">No champions match the current filter: **${filter}**</div>`;
+                return;
+            }
+
+            championListElement.style.display = 'grid'; // Switch back from loading message
+
+            filteredData.forEach(champion => {
+                const card = document.createElement('div');
+                card.classList.add('champion-card');
+                
+                // Add an optional image (using a public LoL champion icon service for flair)
+                const safeName = champion.name.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+
+                card.innerHTML = `
+                    <div class="champion-name">${champion.name}</div>
+                    <img src="https://ddragon.leagueoflegends.com/cdn/14.21.1/img/champion/${champion.name.replace(/[^A-Za-z0-9]/g, '')}.png" 
+                         alt="${champion.name} Icon" 
+                         onerror="this.onerror=null;this.style.display='none';"
+                         style="width: 80px; height: 80px; border-radius: 50%; margin: 10px 0; border: 3px solid ${champion.status === 'Banned' ? red : green};">
+                    <div class="champion-status status-${champion.status}">${champion.status}</div>
+                `;
+                championListElement.appendChild(card);
+            });
+        }
+
+        // Event Listener for the Filter Dropdown
+        filterSelect.addEventListener('change', () => {
+            renderList(championData, filterSelect.value);
+        });
+
+        // Initial Data Load
+        fetchData();
+    </script>
+</body>
+</html>
