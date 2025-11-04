@@ -250,7 +250,13 @@
                 const card = document.createElement('div');
                 card.classList.add('champion-card');
                 
-                const imageURL = `https://ddragon.leagueoflegends.com/cdn/15.21.1/img/champion/${champion.name.replace(/[^A-Za-z0-9]/g, '')}.png`;
+                var imageURL = `https://ddragon.leagueoflegends.com/cdn/15.21.1/img/champion/${champion.name.replace(/[^A-Za-z0-9]/g, '')}.png`;
+                const borderColor = champion.status === 'Banned' ? 'red' : 'green';                
+				if(champion.name.toLowerCase() == "wukong")
+                {
+                	imageURL = `https://ddragon.leagueoflegends.com/cdn/15.21.1/img/champion/MonkeyKing.png`;
+                }
+
                 const borderColor = champion.status === 'Banned' ? 'red' : 'green';
                 card.innerHTML = `
                     <div class="champion-name">${champion.name}</div>
@@ -273,3 +279,4 @@
     </script>
 </body>
 </html>
+
