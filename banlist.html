@@ -218,7 +218,7 @@
                     <img src="https://ddragon.leagueoflegends.com/cdn/14.21.1/img/champion/${champion.name.replace(/[^A-Za-z0-9]/g, '')}.png" 
                          alt="${champion.name} Icon" 
                          onerror="this.onerror=null;this.style.display='none';"
-                         style="width: 80px; height: 80px; border-radius: 50%; margin: 10px 0; border: 3px solid ${champion.status === 'Banned' ? red : green};">
+                         style="width: 80px; height: 80px; border-radius: 50%; margin: 10px 0; border: 3px solid ${champion.status === 'Banned' ? 'red' : 'green'};">
                     <div class="champion-status status-${champion.status}">${champion.status}</div>
                 `;
                 championListElement.appendChild(card);
@@ -234,4 +234,5 @@
         fetchData();
     </script>
 </body>
+
 </html>
