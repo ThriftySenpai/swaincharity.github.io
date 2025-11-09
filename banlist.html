@@ -147,6 +147,7 @@
                     <option value="All">All Champions</option>
                     <option value="Available">Available</option>
                     <option value="Banned">Banned</option>
+                    <option value="BanOrder">Banned Order</option>
                 </select>
             </div>
             <div class="control-group">
@@ -175,6 +176,7 @@
         const textFilter = document.getElementById('text-filter');
         const refreshStatusElement = document.getElementById('refresh-status');
         let championData = []; // To store the parsed data
+        let banOrderData = [];
 
         // --- Data Fetching and Parsing ---
 
@@ -192,6 +194,7 @@
                 refreshStatusElement.innerHTML = `Last Updated: **${timeString}** (Auto-reloads in 5 min)`;
 
                 championData = parseData(csvText);
+                banOrderData = parseBanOrder(csvText);
                 applyFilters();
             } catch (error) {
                 championListElement.innerHTML = `<div class="loading-message" style="color: red;">
@@ -217,12 +220,33 @@
 
             return parsedData.sort((a, b) => a.name.localeCompare(b.name));
         }
+        
+      	function parseBanOrder(csvText) {
+        	const rows = csvText.split('\n').slice(1); 
+        	const parsedData = rows.map(row => {
+                const columns = row.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                
+                const name = columns[8] ? columns[8].replace(/"/g, '').trim() : '';
+                const status = "Banned";
+                console.log(name);
+                if (name) {
+                    return { name, status };
+                }
+                return null;
+            }).filter(item => item !== null);
+            
+            return parsedData;
+        }
 
         // --- Filtering and Rendering ---
         function applyFilters() {
             const statusFilter = filterSelect.value;
             const nameFilter = textFilter.value.toLowerCase().trim();
-            
+            if(statusFilter === "BanOrder")
+            {
+            	renderList(banOrderData);
+            	return;
+            }
             const filteredData = championData.filter(champion => {
                 // 1. Status Filter
                 const statusMatch = (statusFilter === 'All' || champion.status === statusFilter);
@@ -278,5 +302,4 @@
     </script>
 </body>
 </html>
-
 
